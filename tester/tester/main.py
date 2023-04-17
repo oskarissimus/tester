@@ -1,20 +1,27 @@
 from pathlib import Path
 
-from langchain import LLMMathChain, SerpAPIWrapper
 from langchain.agents import AgentType, Tool, initialize_agent
 from langchain.llms import OpenAI
-from langchain.tools import BaseTool
 from langchain.utilities import BashProcess
 
-bash = BashProcess()
-
+bash = BashProcess(return_err_output=True)
 llm = OpenAI(temperature=0)
+
+PROJECT_ROOT = "/home/oskar/git/stressable"
 
 
 def file_writer(input):
     filename = input.split("`")[1]
     file_contents = input.split("```")[1]
-    Path(filename).write_text(file_contents)
+    try:
+        Path(f"{PROJECT_ROOT}/{filename}").write_text(file_contents)
+        return f"created file {filename}"
+    except Exception as e:
+        return f"failed to create file {filename} with error {e}"
+
+
+def run_in_project_root(command):
+    return bash.run(f"cd {PROJECT_ROOT} && {command}")
 
 
 tools = [
@@ -25,12 +32,12 @@ tools = [
     ),
     Tool(
         name="show project structure",
-        func=lambda x: bash.run("tree -I '__pycache__'"),
+        func=lambda x: run_in_project_root("tree -I '__pycache__'"),
         description="shows the project structure",
     ),
     Tool(
         name="show file contents",
-        func=lambda x: bash.run(f"cat {x}"),
+        func=lambda x: run_in_project_root(f"cat {x}"),
         description="useful for when you need to see the contents of a file. The input to this tool should be a filename",
     ),
 ]
@@ -40,6 +47,7 @@ agent = initialize_agent(
     tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
 )
 
-agent.run(
-    "create file with pytest unit tests for the code in the file called `tester/rot13.py`. use the knowlegde of project structure to make sure the file is in the correct location and that imports are correct. tests should be in a directory called `tests`"
-)
+
+agent.run("read file called `stressable/utils.py`")
+agent.run("show project structure")
+agent.run("create file with pytest unit tests for the code")
