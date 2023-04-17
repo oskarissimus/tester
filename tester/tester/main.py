@@ -31,7 +31,7 @@ tools = [
     Tool(
         name="show file contents",
         func=lambda x: bash.run(f"cat {x}"),
-        description="shows the contents of a file",
+        description="useful for when you need to see the contents of a file. The input to this tool should be a filename",
     ),
 ]
 
@@ -40,4 +40,6 @@ agent = initialize_agent(
     tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
 )
 
-agent.run("create file with python implementation of a rot13 algorithm")
+agent.run(
+    "create file with pytest unit tests for the code in the file called `tester/rot13.py`. use the knowlegde of project structure to make sure the file is in the correct location and that imports are correct. tests should be in a directory called `tests`"
+)
