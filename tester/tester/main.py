@@ -107,7 +107,7 @@ agent = initialize_agent(
 
 agent.run(
     """
-1. read file called `stressable/utils.py`")
+1. read file called `stressable/utils.py`
 2. show project structure
 3. use pytest, write to file called `tests/test_utils.py` with unit tests for `stressable/utils.py`
 4. run tests
