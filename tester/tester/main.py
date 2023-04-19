@@ -1,107 +1,14 @@
-import json
-from os import environ
-from pathlib import Path
+from os import getenv
 
-from langchain import OpenAI
-from langchain.agents import AgentType, Tool, initialize_agent
+from langchain.agents import AgentType, initialize_agent
+from langchain.chat_models import ChatOpenAI
 
-from tester.bash_process import BashProcess
-from tester.utils import prepare_env_for_poetry_project
+from tester.tools import tools
 
-# from langchain.chat_models import ChatOpenAI
-
-
-bash = BashProcess(return_err_output=True)
-llm = OpenAI()
-
-PROJECT_ROOT = "/home/oskar/git/stressable"
-
-
-def file_writer(input):
-    try:
-        filename, file_contents = json.loads(input)
-        Path(f"{PROJECT_ROOT}/{filename}").write_text(file_contents)
-        return f"successfully wrote to file {filename}"
-    except Exception as e:
-        return f"failed to write to file {filename} with error {e}"
-
-
-def file_reader(filename):
-    try:
-        file_contents = Path(f"{PROJECT_ROOT}/{filename}").read_text()
-        return f"file contents: {file_contents}"
-    except Exception as e:
-        return f"failed to read file {filename} with error {e}"
-
-
-def run_in_project_root(command):
-    return bash.run_sync(
-        command,
-        cwd=PROJECT_ROOT,
-    )
-
-
-new_env = prepare_env_for_poetry_project(bash, PROJECT_ROOT, environ)
-
-
-def run_in_project_root_with_env(command):
-    return bash.run_sync(
-        command,
-        cwd=PROJECT_ROOT,
-        env=new_env,
-    )
-
-
-tools = [
-    Tool(
-        name="write_file",
-        func=file_writer,
-        description="""useful for when you need to write contents to a file. The input to this tool should be a json encoded python list, for example: ["hello_world.py", "print('hello world')"]""",
-    ),
-    Tool(
-        name="show_project_structure",
-        func=lambda x: run_in_project_root("tree -I '__pycache__'"),
-        description="shows the project structure",
-    ),
-    Tool(
-        name="read_file",
-        func=file_reader,
-        description="useful for when you need to see the contents of a file. The input to this tool should be a filename",
-    ),
-    Tool(
-        name="run_tests",
-        func=lambda x: run_in_project_root_with_env("poetry run pytest"),
-        description="useful for when you need to run tests",
-    ),
-    Tool(
-        name="commit",
-        func=lambda x: run_in_project_root(f"git commit -a -m '{x}'"),
-        description="useful for when you need to commit changes input to this tool should be a commit message",
-    ),
-    Tool(
-        name="push",
-        func=lambda x: run_in_project_root(
-            f"git push --set-upstream origin '{x}'"
-        ),
-        description="useful for when you need to push changes. The input to this tool should be a branch name",
-    ),
-    Tool(
-        name="branch",
-        func=lambda x: run_in_project_root(f"git checkout -b '{x}'"),
-        description="useful for when you need to create a new branch. The input to this tool should be a branch name",
-    ),
-    Tool(
-        name="pull_request",
-        func=lambda x: run_in_project_root(
-            f"gh pr create --fill --title '{x}'"
-        ),
-        description="useful for when you need to create a pull request. The input to this tool should be a pull request title",
-    ),
-]
-
+llm = ChatOpenAI(model_name="gpt-4", request_timeout=120)  # type: ignore
 
 agent = initialize_agent(
-    tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
+    tools, llm, agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION, verbose=True
 )
 
 
